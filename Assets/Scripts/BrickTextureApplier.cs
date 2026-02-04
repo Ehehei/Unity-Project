@@ -19,6 +19,12 @@ public class BrickTextureApplier : MonoBehaviour
         ApplyTextures();
     }
 
+    private void OnDisable()
+    {
+        DestroyTexture(ref brickTexture);
+        DestroyTexture(ref normalTexture);
+    }
+
     private void OnValidate()
     {
         ApplyTextures();
@@ -47,18 +53,56 @@ public class BrickTextureApplier : MonoBehaviour
             return;
         }
 
-        material.SetTexture("_MainTex", albedo);
-        material.SetTextureScale("_MainTex", tiling);
+        EnsureSupportedShader(material);
+
+        if (material.HasProperty("_MainTex"))
+        {
+            material.SetTexture("_MainTex", albedo);
+            material.SetTextureScale("_MainTex", tiling);
+        }
+
+        if (material.HasProperty("_BaseMap"))
+        {
+            material.SetTexture("_BaseMap", albedo);
+            material.SetTextureScale("_BaseMap", tiling);
+        }
 
         if (normal != null)
         {
             material.EnableKeyword("_NORMALMAP");
-            material.SetTexture("_BumpMap", normal);
+            if (material.HasProperty("_BumpMap"))
+            {
+                material.SetTexture("_BumpMap", normal);
+            }
         }
         else
         {
             material.DisableKeyword("_NORMALMAP");
-            material.SetTexture("_BumpMap", null);
+            if (material.HasProperty("_BumpMap"))
+            {
+                material.SetTexture("_BumpMap", null);
+            }
+        }
+    }
+
+    private static void EnsureSupportedShader(Material material)
+    {
+        if (material.shader != null && material.shader.name != "Hidden/InternalErrorShader")
+        {
+            return;
+        }
+
+        var standardShader = Shader.Find("Standard");
+        if (standardShader != null)
+        {
+            material.shader = standardShader;
+            return;
+        }
+
+        var urpShader = Shader.Find("Universal Render Pipeline/Lit");
+        if (urpShader != null)
+        {
+            material.shader = urpShader;
         }
     }
 
@@ -107,5 +151,24 @@ public class BrickTextureApplier : MonoBehaviour
         texture.SetPixels32(pixels);
         texture.Apply(true, true);
         return texture;
+    }
+
+    private static void DestroyTexture(ref Texture2D texture)
+    {
+        if (texture == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            Destroy(texture);
+        }
+        else
+        {
+            DestroyImmediate(texture);
+        }
+
+        texture = null;
     }
 }
