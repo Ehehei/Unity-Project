@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[ExecuteAlways]
 public class TerrainGenerator : MonoBehaviour
 {
     [Header("Terrain Size")]
@@ -18,9 +19,28 @@ public class TerrainGenerator : MonoBehaviour
 
     private Terrain terrain;
 
+    private void OnEnable()
+    {
+        if (!Application.isPlaying)
+        {
+            GenerateIfNeeded();
+        }
+    }
+
     private void Start()
     {
-        GenerateIfNeeded();
+        if (Application.isPlaying)
+        {
+            GenerateIfNeeded();
+        }
+    }
+
+    private void OnValidate()
+    {
+        if (!Application.isPlaying)
+        {
+            GenerateIfNeeded();
+        }
     }
 
     private void GenerateIfNeeded()
@@ -31,6 +51,31 @@ public class TerrainGenerator : MonoBehaviour
             return;
         }
 
+        GenerateTerrain();
+        PopulateDecorations();
+    }
+
+    [ContextMenu("Regenerate Terrain")]
+    private void RegenerateTerrain()
+    {
+        if (terrain == null)
+        {
+            terrain = FindExistingTerrain();
+        }
+
+        var terrainObject = terrain != null ? terrain.gameObject : null;
+        if (terrainObject != null)
+        {
+            SafeDestroy(terrainObject);
+        }
+
+        var decorations = GameObject.Find(DecorationRootName);
+        if (decorations != null)
+        {
+            SafeDestroy(decorations);
+        }
+
+        terrain = null;
         GenerateTerrain();
         PopulateDecorations();
     }
